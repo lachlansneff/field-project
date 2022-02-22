@@ -2,7 +2,11 @@
 name = "field-project"
 version = "0.1.0"
 edition = "2021"
+
+repository = "https://github.com/lachlansneff/field-project"
 readme = "README.md"
 license = "MIT"
+description = "Field projection for all!"
+keywords = ["field", "projection", "project", "proj"]
 
 [dependencies]
