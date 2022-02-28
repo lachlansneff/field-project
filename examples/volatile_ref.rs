@@ -55,33 +55,33 @@ impl<T: Copy> VolatileMut<'_, T> {
     }
 }
 
-impl<'this, T> Project for VolatileRef<'this, T> {
+impl<T, Field> Project<Field> for VolatileRef<'_, T> {
     type Base = T;
 
-    type Output<'a, Field: 'a> where Self: 'a = VolatileRef<'a, Field>;
+    type Output<'a> where Self: 'a, Field: 'a = VolatileRef<'a, Field>;
 
-    unsafe fn project<'a, Field>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> VolatileRef<'a, Field> {
+    unsafe fn project<'a>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> VolatileRef<'a, Field> {
         unsafe {
             VolatileRef::new(project_field(self.ptr))
         }
     }
 }
 
-impl<'this, T> Project for VolatileMut<'this, T> {
+impl<T, Field> Project<Field> for VolatileMut<'_, T> {
     type Base = T;
-    type Output<'a, Field: 'a> where Self: 'a = VolatileMut<'a, Field>;
+    type Output<'a> where Self: 'a, Field: 'a = VolatileMut<'a, Field>;
 
-    unsafe fn project<'a, Field>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> VolatileMut<'a, Field> {
+    unsafe fn project<'a>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> VolatileMut<'a, Field> {
         unsafe {
             VolatileMut::new(project_field(self.ptr) as *mut _)
         }
     }
 }
 
-impl<'this, T> ProjectMut for VolatileMut<'this, T> {
-    type OutputMut<'a, Field: 'a> where Self: 'a = VolatileMut<'a, Field>;
+impl<T, Field> ProjectMut<Field> for VolatileMut<'_, T> {
+    type OutputMut<'a> where Self: 'a, Field: 'a = VolatileMut<'a, Field>;
 
-    unsafe fn project_mut<'a, Field>(&'a mut self, project_field: fn(*mut Self::Base) -> *mut Field) -> VolatileMut<'a, Field> {
+    unsafe fn project_mut<'a>(&'a mut self, project_field: fn(*mut Self::Base) -> *mut Field) -> VolatileMut<'a, Field> {
         unsafe {
             VolatileMut::new(project_field(self.ptr))
         }
@@ -97,11 +97,12 @@ struct Foo {
 fn main() {
     let mut v = unsafe { VolatileMut::new(&mut Foo::default()) };
 
-    let reg1 = proj!(v.reg1);
-    // let reg2 = proj!(mut v.reg2);
+    let reg1 = proj!(mut v.reg1);
+    reg1.write(42);
 
-    // reg2.write(42);
+    let reg1 = proj!(v.reg1);
+    let reg2 = proj!(v.reg2);
     
     println!("reg1: {:?}", reg1.read());
-    // println!("reg2: {:?}", reg2.read());
+    println!("reg2: {:?}", reg2.read());
 }

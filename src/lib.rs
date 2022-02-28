@@ -4,56 +4,56 @@
 mod pin;
 mod maybe_uninit;
 
-pub trait Project {
+pub trait Project<Field: ?Sized> {
     type Base: ?Sized;
-    type Output<'a, Field: 'a> where Self: 'a;
+    type Output<'a> where Self: 'a, Field: 'a;
     
-    unsafe fn project<'a, Field>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a, Field>;
+    unsafe fn project<'a>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a>;
 }
 
-pub trait ProjectMut: Project {
-    type OutputMut<'a, Field: 'a> where Self: 'a;
+pub trait ProjectMut<Field: ?Sized>: Project<Field> {
+    type OutputMut<'a> where Self: 'a, Field: 'a;
     
-    unsafe fn project_mut<'a, Field>(&'a mut self, project_field: fn(*mut Self::Base) -> *mut Field) -> Self::OutputMut<'a, Field>;
+    unsafe fn project_mut<'a>(&'a mut self, project_field: fn(*mut Self::Base) -> *mut Field) -> Self::OutputMut<'a>;
 }
 
-impl<T> Project for &'_ T where T: Project {
+impl<T, Field: ?Sized> Project<Field> for &'_ T where T: Project<Field> {
     type Base = T::Base;
-    type Output<'a, Field: 'a> where Self: 'a = T::Output<'a, Field>;
+    type Output<'a> where Self: 'a, Field: 'a = T::Output<'a>;
 
-    unsafe fn project<'a, Field>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a, Field> {
+    unsafe fn project<'a>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a> {
         unsafe {
             T::project(*self, project_field)
         }
     }
 }
 
-impl<T> Project for &'_ mut T where T: Project {
+impl<T, Field: ?Sized> Project<Field> for &'_ mut T where T: Project<Field> {
     type Base = T::Base;
-    type Output<'a, Field: 'a> where Self: 'a = T::Output<'a, Field>;
+    type Output<'a> where Self: 'a, Field: 'a = T::Output<'a>;
 
-    unsafe fn project<'a, Field>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a, Field> {
+    unsafe fn project<'a>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a> {
         unsafe {
             T::project(*self, project_field)
         }
     }
 }
 
-impl<T> ProjectMut for &'_ mut T where T: ProjectMut {
-    type OutputMut<'a, Field: 'a> where Self: 'a = T::OutputMut<'a, Field>;
+impl<T, Field: ?Sized> ProjectMut<Field> for &'_ mut T where T: ProjectMut<Field> {
+    type OutputMut<'a> where Self: 'a, Field: 'a = T::OutputMut<'a>;
 
-    unsafe fn project_mut<'a, Field>(&'a mut self, project_field: fn(*mut Self::Base) -> *mut Field) -> Self::OutputMut<'a, Field> {
+    unsafe fn project_mut<'a>(&'a mut self, project_field: fn(*mut Self::Base) -> *mut Field) -> Self::OutputMut<'a> {
         unsafe {
             T::project_mut(*self, project_field)
         }
     }
 }
 
-impl<T> Project for Box<T> where T: Project {
+impl<T, Field: ?Sized> Project<Field> for Box<T> where T: Project<Field> {
     type Base = T::Base;
-    type Output<'a, Field: 'a> where Self: 'a = T::Output<'a, Field>;
+    type Output<'a> where Self: 'a, Field: 'a = T::Output<'a>;
 
-    unsafe fn project<'a, Field>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a, Field> {
+    unsafe fn project<'a>(&'a self, project_field: fn(*const Self::Base) -> *const Field) -> Self::Output<'a> {
         unsafe {
             T::project(&**self, project_field)
         }
@@ -79,12 +79,12 @@ impl<T> Project for Box<T> where T: Project {
 macro_rules! proj {
     ($input:ident.$field:ident) => {{
         unsafe {
-            <_ as $crate::Project>::project(&$input, |base| unsafe { core::ptr::addr_of!((*base).$field) })
+            <_ as $crate::Project<_>>::project(&$input, |base| unsafe { core::ptr::addr_of!((*base).$field) })
         }
     }};
     (mut $input:ident.$field:ident) => {{
         unsafe {
-            <_ as $crate::ProjectMut>::project_mut(&mut $input, |base| unsafe { core::ptr::addr_of_mut!((*base).$field) })
+            <_ as $crate::ProjectMut<_>>::project_mut(&mut $input, |base| unsafe { core::ptr::addr_of_mut!((*base).$field) })
         }
     }};
 }
